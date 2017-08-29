@@ -510,20 +510,32 @@ public class AddressBook {
      * @return feedback display message for the operation result
      */
     private static String executeEditPerson(String commandArgs) {
-        // try decoding a person from the command args
-        String[] newPersonData = makePersonFromData(
-                extractNameFromPersonString(commandArgs),
-                extractPhoneFromPersonString(commandArgs),
-                extractEmailFromPersonString(commandArgs)
-        );
+        // try extracting a person's data from the command args
+        String[] newPersonData = extractDataFromEditPersonArgs(commandArgs);
         if (!isEditPersonDataValid(newPersonData)) {
             return getMessageForInvalidCommandInput(COMMAND_EDIT_WORD, getUsageInfoForEditCommand());
         }
-        if (extractTargetIndexByName(newPersonData[0]) == -1) {
+        if (extractPersonIndexByName(newPersonData[0]) == ALL_PERSONS.size()) {
             return MESSAGE_PERSON_NOT_IN_ADDRESSBOOK;
         }
-        String[] editedPerson = editPersonData(newPersonData, extractTargetIndexByName(newPersonData[0]));
+        String[] editedPerson = editPersonData(newPersonData, extractPersonIndexByName(newPersonData[0]));
         return getMessageForSuccessfulEditPerson(editedPerson);
+    }
+
+    /**
+     * Extracts person's data from the command arguments given for the edit persons command.
+     *
+     * @param editPersonCommandArgs full command args string for the edit persons command
+     * @return data as an array of string
+     */
+    private static String[] extractDataFromEditPersonArgs(String editPersonCommandArgs) {
+        return makePersonFromData(
+                extractNameFromPersonString(editPersonCommandArgs),
+                editPersonCommandArgs.contains(PERSON_DATA_PREFIX_PHONE)
+                                                ? extractPhoneFromPersonString(editPersonCommandArgs) : "",
+                editPersonCommandArgs.contains(PERSON_DATA_PREFIX_EMAIL)
+                                                ? extractEmailFromPersonString(editPersonCommandArgs) : ""
+        );
     }
 
     /**
@@ -542,7 +554,7 @@ public class AddressBook {
      * @param personName name of the person to extract index
      * @return extracted index
      */
-    private static int extractTargetIndexByName(String personName) {
+    private static int extractPersonIndexByName(String personName) {
         int i = 0;
         for (String[] person : getAllPersonsInAddressBook()) {
             if (personName.equals(person[0]))
@@ -550,7 +562,7 @@ public class AddressBook {
             else
                 i++;
         }
-        return -1;
+        return i;
     }
 
     /**
@@ -1059,6 +1071,12 @@ public class AddressBook {
     private static String extractNameFromPersonString(String encoded) {
         final int indexOfPhonePrefix = encoded.indexOf(PERSON_DATA_PREFIX_PHONE);
         final int indexOfEmailPrefix = encoded.indexOf(PERSON_DATA_PREFIX_EMAIL);
+        // If email missing
+        if (!encoded.contains(PERSON_DATA_PREFIX_EMAIL))
+            return encoded.substring(0, indexOfPhonePrefix).trim();
+        // If phone number missing
+        if (!encoded.contains(PERSON_DATA_PREFIX_PHONE))
+            return encoded.substring(0, indexOfEmailPrefix).trim();
         // name is leading substring up to first data prefix symbol
         int indexOfFirstPrefix = Math.min(indexOfEmailPrefix, indexOfPhonePrefix);
         return encoded.substring(0, indexOfFirstPrefix).trim();
