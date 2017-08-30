@@ -519,7 +519,7 @@ public class AddressBook {
         if (extractPersonIndexByName(newPersonData[0]) == ALL_PERSONS.size()) {
             return MESSAGE_PERSON_NOT_IN_ADDRESSBOOK;
         }
-        String[] editedPerson = editPersonData(newPersonData, extractPersonIndexByName(newPersonData[0]));
+        String[] editedPerson = editPersonDataInAddressBook(newPersonData, extractPersonIndexByName(newPersonData[0]));
         return getMessageForSuccessfulEditPerson(editedPerson);
     }
 
@@ -588,12 +588,13 @@ public class AddressBook {
      * @param newData data to replace the old one
      * @param personIndex index to check
      */
-    private static String[] editPersonData(String[] newData, int personIndex) {
+    private static String[] editPersonDataInAddressBook(String[] newData, int personIndex) {
         String[] presentData = ALL_PERSONS.get(personIndex);
         if (!newData[PERSON_DATA_INDEX_PHONE].isEmpty())
             presentData[PERSON_DATA_INDEX_PHONE] = newData[PERSON_DATA_INDEX_PHONE];
         if (!newData[PERSON_DATA_INDEX_EMAIL].isEmpty())
             presentData[PERSON_DATA_INDEX_EMAIL] = newData[PERSON_DATA_INDEX_EMAIL];
+        savePersonsToFile(getAllPersonsInAddressBook(), storageFilePath);
         return presentData;
     }
 
