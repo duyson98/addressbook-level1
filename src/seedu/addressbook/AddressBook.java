@@ -510,11 +510,12 @@ public class AddressBook {
      * @return feedback display message for the operation result
      */
     private static String executeEditPerson(String commandArgs) {
-        // try extracting a person's data from the command args
-        String[] newPersonData = extractDataFromEditPersonArgs(commandArgs);
-        if (!isEditPersonDataValid(newPersonData)) {
+        // try decoding a person's data from the command args
+        Optional<String[]> decodeData = decodeDataFromEditPersonArgs(commandArgs);
+        if (!decodeData.isPresent()) {
             return getMessageForInvalidCommandInput(COMMAND_EDIT_WORD, getUsageInfoForEditCommand());
         }
+        final String[] newPersonData = decodeData.get();
         if (extractPersonIndexByName(newPersonData[0]) == ALL_PERSONS.size()) {
             return MESSAGE_PERSON_NOT_IN_ADDRESSBOOK;
         }
@@ -528,14 +529,28 @@ public class AddressBook {
      * @param editPersonCommandArgs full command args string for the edit persons command
      * @return data as an array of string
      */
-    private static String[] extractDataFromEditPersonArgs(String editPersonCommandArgs) {
-        return makePersonFromData(
+    private static Optional<String[]> decodeDataFromEditPersonArgs(String editPersonCommandArgs) {
+        // check that we can extract the parts of a person from the encoded string
+        if (!isEditPersonDataExtractableFrom(editPersonCommandArgs)) {
+            return Optional.empty();
+        }
+        final String[] decodedPerson = makePersonFromData(
                 extractNameFromPersonString(editPersonCommandArgs),
                 editPersonCommandArgs.contains(PERSON_DATA_PREFIX_PHONE)
                                                 ? extractPhoneFromPersonString(editPersonCommandArgs) : "",
                 editPersonCommandArgs.contains(PERSON_DATA_PREFIX_EMAIL)
                                                 ? extractEmailFromPersonString(editPersonCommandArgs) : ""
         );
+        // check that the constructed person is valid
+        return isEditPersonDataValid(decodedPerson) ? Optional.of(decodedPerson) : Optional.empty();
+    }
+
+    private static boolean isEditPersonDataExtractableFrom(String personData) {
+        final String matchAnyPersonDataPrefix = PERSON_DATA_PREFIX_PHONE + '|' + PERSON_DATA_PREFIX_EMAIL;
+        final String[] splitArgs = personData.trim().split(matchAnyPersonDataPrefix);
+        return splitArgs.length >= 2 // 2 arguments
+                && !splitArgs[0].isEmpty() // non-empty arguments
+                && (!splitArgs[1].isEmpty() || !splitArgs[2].isEmpty());
     }
 
     /**
@@ -545,7 +560,9 @@ public class AddressBook {
      * @return whether the input data is valid
      */
     private static boolean isEditPersonDataValid(String[] personData) {
-        return (!personData[PERSON_DATA_INDEX_PHONE].isEmpty() || !personData[PERSON_DATA_INDEX_EMAIL].isEmpty());
+        return isPersonNameValid(personData[0]) &&
+                (personData[PERSON_DATA_INDEX_PHONE].isEmpty() || isPersonPhoneValid(personData[1])) &&
+                (personData[PERSON_DATA_INDEX_EMAIL].isEmpty() || isPersonEmailValid(personData[2]));
     }
 
     /**
